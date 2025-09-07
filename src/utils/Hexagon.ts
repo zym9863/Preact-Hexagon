@@ -224,26 +224,171 @@ export class Hexagon {
   render(ctx: CanvasRenderingContext2D): void {
     ctx.save();
     
-    // 绘制六边形边框
+    // 绘制背景填充
+    this.renderBackground(ctx);
+    
+    // 绘制发光边框
+    this.renderGlowBorder(ctx);
+    
+    // 绘制主边框
+    this.renderMainBorder(ctx);
+    
+    // 绘制顶点装饰
+    this.renderVertexDecorations(ctx);
+    
+    // 绘制中心点
+    this.renderCenter(ctx);
+    
+    ctx.restore();
+  }
+
+  /**
+   * 渲染背景填充
+   */
+  private renderBackground(ctx: CanvasRenderingContext2D): void {
     ctx.beginPath();
     ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
     
     for (let i = 1; i < this.vertices.length; i++) {
       ctx.lineTo(this.vertices[i].x, this.vertices[i].y);
     }
-    
     ctx.closePath();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3;
+    
+    // 创建径向渐变背景
+    const gradient = ctx.createRadialGradient(
+      this.center.x, this.center.y, 0,
+      this.center.x, this.center.y, this.radius
+    );
+    gradient.addColorStop(0, 'rgba(26, 26, 46, 0.1)');
+    gradient.addColorStop(0.7, 'rgba(22, 33, 62, 0.05)');
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
+    
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  }
+
+  /**
+   * 渲染发光边框
+   */
+  private renderGlowBorder(ctx: CanvasRenderingContext2D): void {
+    // 外层发光
+    ctx.globalCompositeOperation = 'screen';
+    ctx.beginPath();
+    ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
+    
+    for (let i = 1; i < this.vertices.length; i++) {
+      ctx.lineTo(this.vertices[i].x, this.vertices[i].y);
+    }
+    ctx.closePath();
+    
+    const rotationFactor = Math.abs(this.rotationSpeed) / 2; // 旋转速度影响发光强度
+    const glowAlpha = 0.3 + rotationFactor * 0.2;
+    
+    ctx.strokeStyle = `rgba(0, 255, 136, ${glowAlpha})`;
+    ctx.lineWidth = 6 + rotationFactor * 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.stroke();
     
-    // 可选：绘制中心点
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  /**
+   * 渲染主边框
+   */
+  private renderMainBorder(ctx: CanvasRenderingContext2D): void {
+    // 绘制渐变边框
+    for (let i = 0; i < this.vertices.length; i++) {
+      const start = this.vertices[i];
+      const end = this.vertices[(i + 1) % this.vertices.length];
+      
+      // 为每条边创建不同的渐变
+      const gradient = ctx.createLinearGradient(start.x, start.y, end.x, end.y);
+      const hue1 = (i * 60 + this.rotation * 180 / Math.PI) % 360;
+      const hue2 = ((i + 1) * 60 + this.rotation * 180 / Math.PI) % 360;
+      
+      gradient.addColorStop(0, `hsl(${hue1}, 70%, 75%)`);
+      gradient.addColorStop(0.5, '#ffffff');
+      gradient.addColorStop(1, `hsl(${hue2}, 70%, 75%)`);
+      
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+  }
+
+  /**
+   * 渲染顶点装饰
+   */
+  private renderVertexDecorations(ctx: CanvasRenderingContext2D): void {
+    for (let i = 0; i < this.vertices.length; i++) {
+      const vertex = this.vertices[i];
+      
+      // 绘制顶点发光点
+      const gradient = ctx.createRadialGradient(
+        vertex.x, vertex.y, 0,
+        vertex.x, vertex.y, 8
+      );
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+      gradient.addColorStop(0.5, 'rgba(0, 255, 136, 0.6)');
+      gradient.addColorStop(1, 'rgba(0, 255, 136, 0)');
+      
+      ctx.beginPath();
+      ctx.arc(vertex.x, vertex.y, 6, 0, 2 * Math.PI);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      // 绘制顶点核心
+      ctx.beginPath();
+      ctx.arc(vertex.x, vertex.y, 2, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
+  }
+
+  /**
+   * 渲染中心点
+   */
+  private renderCenter(ctx: CanvasRenderingContext2D): void {
+    // 中心发光效果
+    const centerGradient = ctx.createRadialGradient(
+      this.center.x, this.center.y, 0,
+      this.center.x, this.center.y, 10
+    );
+    centerGradient.addColorStop(0, 'rgba(255, 64, 87, 0.8)');
+    centerGradient.addColorStop(0.7, 'rgba(255, 64, 87, 0.3)');
+    centerGradient.addColorStop(1, 'rgba(255, 64, 87, 0)');
+    
     ctx.beginPath();
-    ctx.arc(this.center.x, this.center.y, 3, 0, 2 * Math.PI);
-    ctx.fillStyle = '#ff0000';
+    ctx.arc(this.center.x, this.center.y, 8, 0, 2 * Math.PI);
+    ctx.fillStyle = centerGradient;
     ctx.fill();
     
-    ctx.restore();
+    // 中心核心点
+    ctx.beginPath();
+    ctx.arc(this.center.x, this.center.y, 3, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ff4057';
+    ctx.fill();
+    
+    // 旋转指示器
+    if (Math.abs(this.rotationSpeed) > 0.1) {
+      const indicatorLength = 15;
+      const indicatorAngle = this.rotation;
+      const endX = this.center.x + Math.cos(indicatorAngle) * indicatorLength;
+      const endY = this.center.y + Math.sin(indicatorAngle) * indicatorLength;
+      
+      ctx.beginPath();
+      ctx.moveTo(this.center.x, this.center.y);
+      ctx.lineTo(endX, endY);
+      ctx.strokeStyle = 'rgba(255, 64, 87, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
   }
 
   /**
